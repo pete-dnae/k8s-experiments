@@ -4,9 +4,3 @@
 - Has a single endpoint which returns a set of x,y points that look cute when
   plotted.
 - The points vary according to the time the request is received.
-
-# Build Environment
-
-I have set up a (venv) virtual environment external to this directory to
-provide the python environment.
-
