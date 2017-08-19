@@ -1,18 +1,42 @@
 """
-A Flask app that replies to all requests with a json object that encapsulates a
-series of hard-coded x,y point values.
+A Flask REST API that replies to all POST requests with a JSON object that 
+represents a graph of a sin wave. I.e. a list of x/y points.
 
-In accordance with 12-factor principles, we don't hook up the app to the web 
-server (like the Flask development server) in this code (nor try to run it) - 
-and instead, leave these choices to be done by external configuration. 
+The obligatory POST payload determines how finely spaced the points should be.
+Like this:
+
+{
+    "intervals": 12
+}
 
 """
 
-from flask import Flask, jsonify
+from flask import Flask, jsonify, abort, request
+import math
 
 app = Flask(__name__)
 
-@app.route('/')
+@app.route('/', methods=['POST'])
 def graph_points():
-    points = ((0,1), (1, 0.5), (2, 1.0))
+
+    # Get the point spacing from the POST message.
+    try:
+        json = request.get_json()
+        intervals = json['intervals']
+    except Exception as e:
+        abort(400, 'Cannot find [intervals] key in JSON POST payload')
+    if ((intervals < 3) or (intervals > 100)):
+        abort(400, 'Illegal value for [intervals] parameter')
+
+    # The other sin wave parameters are hard coded.
+    ampl = 2
+    cycles = 3
+    
+    # Build list of points
+    points = []
+    for i in range(intervals + 1):
+        theta = (i / float(intervals)) * 2 * math.pi * cycles
+        y = ampl * math.sin(theta)
+        points.append((theta, y))
+
     return jsonify(points)
