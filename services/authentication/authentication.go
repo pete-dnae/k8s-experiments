@@ -1,22 +1,20 @@
 /*
 
-A REST API service that clients can can use to request access-granting JWTs for
-the other services in the microservices suite.
+A REST API service that handles client authentication for all the services in
+this suite.
 
-Any other services in the suite that require access control, can then demand that
-the tokens issues by this service be provided by their clients in requests.
+Clients can can use it to request access tokens. The other services can use these
+tokens to authorize access.
 
-It uses email verification to authenticate the client, and access is granted in
-the form of a JWT. The system does not store email addresses or details of users.
-The email verification is a one-shot authentication exercise, after which the user
-email or identity plays no further role.
+A token is issued when a client can prove they own any dnae email address, and
+will be held by the client's computer for use in subsequent service requests.
 
 The authentication protocol is as follows:
 
-1) Client hits <request_access> endpoint, with <dnae-email-name> as payload.
+1) Client hits <request-access> endpoint, with <dnae-email-name> as payload.
 
-2) Server composes a <claim_access> JWT that:
-    - states its claim to be "claim_access"
+2) Server composes a <claim-access> JWT that:
+    - states its claim to be "claim-access"
     - specifies a time limit of 5 minutes hence
 
 3) Server sends an email to <dnae-email-name>@dnae.com, with a clickable link
@@ -24,19 +22,18 @@ The authentication protocol is as follows:
 
    i.e.
 
-   this_server::/claim_access/<claim_access_jwt>
+   this-server::/claim-access/<claim-access-jwt>
 
 4) Server replies OK if the email got sent.
 
-5) Some time in the next 5 minutes, the user clicks the link from the email they
-   received.
+5) Some time later, the user clicks the link from the email they received.
 
-6) The server receives the request on <claim_access>, and will grant access if
+6) The server receives the request on <claim-access>, and will grant access if
    the JWT non-repudiation and data integrity checks pass, and the request has
    not expired.
 
    To grant access, the server replies to the request, with a newly created
-   <acces_granted> JWT in the form of a JSON object. This token has no time
+   <acces-granted> JWT in the form of a JSON object. This token has no time
    limit.
 
    If the server declines to grant access, it replies with ??? access denied
@@ -67,21 +64,80 @@ Weaknesses
 package main
 
 import (
+    "net/http"
+    "io/ioutil"
+    "encoding/json"
+    "fmt"
+    "errors"
+
 	"gopkg.in/gomail.v2"
 )
 
-func main() {
-	print("XXXX STARTING\n")
+
+func handle_request_access(w http.ResponseWriter, r *http.Request) {
+
+    // What DNAe email address does the client claim to control?
+
+    emailName, err := getNameFromRequestPayload(r)
+    if err != nil {
+        panic(err)
+    }
+    fmt.Printf("emailName parsed: %v\n", emailName)
+
+    // Make an access-claim token to include in the verification email
+    // we send to the user.
+
+    access_claim_tkn, err := makeAccessClaimToken()
+    if err != nil {
+        panic(err)
+    }
+
+    // Send the verification email to the user.
+
+    if err = sendVerificationEmail(emailName, access_claim_tkn); err != nil {
+        send internal system error or silence with log?
+    }
+    return ok code
+}
+
+
+func getNameFromRequestPayload(r *http.Request) (name string, err error){
+
+    payload, err := ioutil.ReadAll(r.Body)
+    if err != nil {
+        return "", err
+    }
+
+    var deserialized struct {
+        EmailName  string
+    }
+    
+    err = json.Unmarshal(payload, &deserialized)
+    if err != nil {
+        return "", err
+    }
+
+    if deserialized.EmailName == "" {
+        return "", errors.New("Cannot read email name from request payload.")
+    }
+    return deserialized.EmailName, err
+}
+
+
+func send_mail() {
 
 	m := gomail.NewMessage()
 
-	m.setHeader("From", "pretend_user@pretend.org")
-	m.SetHeader("To", "success@simulator.amazonses.com")
+	m.SetHeader("From", "peterhoward42@gmail.com")
+	m.SetHeader("From", "pete.howard@dnae.com")
+	m.SetHeader("To", "peterhoward42@gmail.com")
 	m.SetHeader("Subject", "Hello from SES sent message")
 	m.SetBody("text/html", "Hello <b>Bob</b> and <i>Cora</i>!")
 
+    // These AWS SES SMTP credentials were created in the AWS console.
 	smtp_usr := "AKIAJA7X6HNYWNKXMBKA"
 	smtp_pass := "AuSWIed+FQLKEjciadCXFAvx+oqDfLUurMnktMdvRJ9g"
+
 	// d := gomail.NewDialer("smtp.example.com", 587, "user", "123456")
 	d := gomail.NewDialer("email-smtp.eu-west-1.amazonaws.com", 587, smtp_usr,
 		smtp_pass)
@@ -89,6 +145,9 @@ func main() {
 	if err := d.DialAndSend(m); err != nil {
 		panic(err)
 	}
-	print("XXXX ENDED\n")
+}
 
+func main() {
+    http.HandleFunc("/request-access", handle_request_access)
+    http.ListenAndServe(":8080", nil)
 }
