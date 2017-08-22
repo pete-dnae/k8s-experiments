@@ -3,8 +3,8 @@
 A REST API service that handles client authentication for all the services in
 this suite.
 
-Clients can can use it to request access tokens. The other services can use these
-tokens to authorize access.
+Clients can can use it to request access tokens. The other services can use
+these tokens to authorize access.
 
 A token is issued when a client can prove they own any dnae email address, and
 will be held by the client's computer for use in subsequent service requests.
@@ -42,9 +42,9 @@ The authentication protocol is as follows:
 
 Weaknesses
 
-    This is designed to not require the back end to know about user identities at
-    all. It grants access only to people who at least once at some time in the
-    past could receive an email on a DNAe address.
+    This is designed to not require the back end to know about user identities
+at all. It grants access only to people who at least once at some time in the
+past could receive an email on a DNAe address.
 
     We are treating such people as intrinsically trustworthy.
 
