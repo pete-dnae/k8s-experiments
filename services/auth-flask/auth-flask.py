@@ -66,7 +66,7 @@ Weaknesses
 import datetime
 
 # Third party packages
-from flask import Flask, request, abort
+from flask import Flask, request, abort, url_for
 from jsonschema import validate
 from flask_mail import Mail, Message
 import jwt
@@ -86,6 +86,10 @@ def request_access():
     email_name = _parse_email_name()
     _send_verification_email(email_name)
     return '' # Implicit HTTP OK status.
+
+@app.route('/claim-access', methods=['POST'])
+def claim_access():
+    pass
 
 
 #-----------------------------------------------------------------------------
@@ -128,9 +132,14 @@ def _assemble_verification_email():
         'exp': expires_at,
         'aud': _CLAIM_ACCESS
     }
-    encoded_jwt = jwt.encode(payload, _SECRET, algorithm='HS256')
-    print('encoded_jwt: %s' % encoded_jwt)
-    return '</b>proper html coming soon</b>'
+    encoded_jwt = jwt.encode(payload, _SECRET, algorithm='HS256').decode()
+    server_name = app.config['VERIFICATION_EMAIL_CLICKABLE_LINK_URL']
+    link = """
+            Please click this link to verify your email: 
+            <a>href="%s%s/%s"</a>
+    """ % (server_name, url_for('claim_access'), encoded_jwt)
+    print(link)
+    return '<b>real one coming soon</b>'
 
-_CLAIM_ACCESS = 'claim access'
+_CLAIM_ACCESS = 'claim-access'
 _SECRET = 'foobar'
