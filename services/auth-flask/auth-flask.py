@@ -79,7 +79,7 @@ mail = Mail(app)
 @app.route('/request-access', methods=['POST'])
 def request_access():
     email_name = parse_email_name()
-    send__verify_email_to_dnae_address(email_name)
+    send_verification_email(email_name)
     return '' # Implicit HTTP OK status.
 
 
@@ -94,22 +94,24 @@ def parse_email_name():
         validate(json, {
             "type": "object",
             "properties": {
-                "email_name": {
+                "EmailName": {
                     "type": "string"
                 }
             }
         })
-        email_name = json['email_name']
+        email_name = json['EmailName']
 
     except Exception as e:
         # Log exception to stdout.
-        abort(400, 'Failed to parse email_name from POST JSON')
+        abort(400, 'Failed to parse EmailName from POST JSON')
 
     return email_name
 
 
-def send_verify_email_to_dnae_address(email_name):
+def send_verification_email(email_name):
+    recipient = email_name + '@dnae.com'
     html = '<b>hello</b>'
-    msg = Message(html, recipients=["peterhoward42@gmail.com"])
-    mail.send()
+    msg = Message(html=html, subject='Please confirm your email address.', 
+            recipients=[recipient])
+    mail.send(msg)
 
