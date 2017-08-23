@@ -62,9 +62,14 @@ Weaknesses
 """
 
 
+# Standard imports
+import datetime
+
+# Third party packages
 from flask import Flask, request, abort
 from jsonschema import validate
 from flask_mail import Mail, Message
+import jwt
 
 app = Flask(__name__)
 app.config.from_envvar('AUTH_FLASK_SETTINGS')
@@ -78,8 +83,8 @@ mail = Mail(app)
 
 @app.route('/request-access', methods=['POST'])
 def request_access():
-    email_name = parse_email_name()
-    send_verification_email(email_name)
+    email_name = _parse_email_name()
+    _send_verification_email(email_name)
     return '' # Implicit HTTP OK status.
 
 
@@ -87,7 +92,7 @@ def request_access():
 # INTERNAL, IMPLEMENTATION FUNCTIONS
 #-----------------------------------------------------------------------------
 
-def parse_email_name():
+def _parse_email_name():
 
     try:
         json = request.get_json()
@@ -108,10 +113,24 @@ def parse_email_name():
     return email_name
 
 
-def send_verification_email(email_name):
+def _send_verification_email(email_name):
     recipient = email_name + '@dnae.com'
-    html = '<b>hello</b>'
+    html = _assemble_verification_email()
     msg = Message(html=html, subject='Please confirm your email address.', 
             recipients=[recipient])
-    mail.send(msg)
+    #mail.send(msg)
 
+
+def _assemble_verification_email():
+
+    expires_at = datetime.datetime.now() + datetime.timedelta(minutes=5)
+    payload = {
+        'exp': expires_at,
+        'aud': _CLAIM_ACCESS
+    }
+    encoded_jwt = jwt.encode(payload, _SECRET, algorithm='HS256')
+    print('encoded_jwt: %s' % encoded_jwt)
+    return '</b>proper html coming soon</b>'
+
+_CLAIM_ACCESS = 'claim access'
+_SECRET = 'foobar'

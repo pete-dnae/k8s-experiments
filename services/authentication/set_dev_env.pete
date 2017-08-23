@@ -1,3 +1,0 @@
-export GOROOT=/usr/local/go
-export GOPATH=$HOME/k8s-experiments/services/authentication
-export PATH=$GOPATH/bin:$GOROOT/bin:$PATH
