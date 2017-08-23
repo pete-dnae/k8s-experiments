@@ -79,7 +79,7 @@ mail = Mail(app)
 @app.route('/request-access', methods=['POST'])
 def request_access():
     email_name = parse_email_name()
-    send_email_to_dnae_address(email_name)
+    send__verify_email_to_dnae_address(email_name)
     return '' # Implicit HTTP OK status.
 
 
@@ -108,7 +108,8 @@ def parse_email_name():
     return email_name
 
 
-def send_email_to_dnae_address(email_name):
+def send_verify_email_to_dnae_address(email_name):
     html = '<b>hello</b>'
     msg = Message(html, recipients=["peterhoward42@gmail.com"])
     mail.send()
+
