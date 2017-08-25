@@ -1,0 +1,13 @@
+#!/bin/bash
+
+# Set up Pete's development environment settings.
+
+source  ~/virtual_envs/auth-flask/bin/activate
+
+repo_root=~/k8s-experiments
+
+cd $repo_root/services/auth-flask
+
+export FLASK_APP=$repo_root/services/auth-flask/auth-flask.py
+
+export AUTH_FLASK_SETTINGS=$repo_root/configs/auth-flask/config-for-development.cfg

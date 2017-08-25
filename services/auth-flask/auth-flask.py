@@ -59,6 +59,18 @@ Weaknesses
     o  Continue to access the systems these tokens protect, after they had left
        DNAe.
 
+App Launch and Configuration
+
+    o  A Flask app is a WSGI application and can thus be launched by any 
+       WSGI-compliant web server.
+    o  The <flask> development server is fine for development purposes - 
+       see http://flask.pocoo.org/docs/0.12/quickstart/#a-minimal-application.
+
+    o  The app uses a standard Flask configuration file, which it will load from
+       the location specified by the AUTH_FLASK_SETTINGS environment variable.
+    o  An example may be found in a sister directory to /services called
+       /configs.
+
 """
 
 
@@ -112,7 +124,7 @@ def _parse_email_name():
 
     except Exception as e:
         # Log exception to stdout.
-        abort(400, 'Failed to parse EmailName from POST JSON')
+        abort(400, 'Failed to parse EmailName from the POST PAYLOAD')
 
     return email_name
 
@@ -130,7 +142,7 @@ def _assemble_verification_email():
     expires_at = datetime.datetime.now() + datetime.timedelta(minutes=5)
     payload = {
         'exp': expires_at,
-        'aud': _CLAIM_ACCESS
+        'aud': _CLAIM_ACCESS # aud is a reserved JWT keyword: audience
     }
     encoded_jwt = jwt.encode(payload, _SECRET, algorithm='HS256').decode()
     server_name = app.config['VERIFICATION_EMAIL_CLICKABLE_LINK_URL']
@@ -140,6 +152,9 @@ def _assemble_verification_email():
     """ % (server_name, url_for('claim_access'), encoded_jwt)
     print(link)
     return '<b>real one coming soon</b>'
+
+
+# Constants used internally only.
 
 _CLAIM_ACCESS = 'claim-access'
 _SECRET = 'foobar'
