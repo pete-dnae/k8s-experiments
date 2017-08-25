@@ -134,7 +134,7 @@ def _send_verification_email(email_name):
     html = _assemble_verification_email()
     msg = Message(html=html, subject='Please confirm your email address.', 
             recipients=[recipient])
-    #mail.send(msg)
+    mail.send(msg)
 
 
 def _assemble_verification_email():
@@ -146,12 +146,13 @@ def _assemble_verification_email():
     }
     encoded_jwt = jwt.encode(payload, _SECRET, algorithm='HS256').decode()
     server_name = app.config['VERIFICATION_EMAIL_CLICKABLE_LINK_URL']
-    link = """
-            Please click this link to verify your email: 
-            <a>href="%s%s/%s"</a>
+    html_message = """
+        If you just requested access to the DNAe software team's web services,
+        please click the link below to prove that you own a DNAe email address.
+        <p>
+        <a href="%s%s/%s"> click here </a>
     """ % (server_name, url_for('claim_access'), encoded_jwt)
-    print(link)
-    return '<b>real one coming soon</b>'
+    return html_message
 
 
 # Constants used internally only.
