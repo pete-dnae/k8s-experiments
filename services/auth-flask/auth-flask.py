@@ -99,9 +99,10 @@ def request_access():
     _send_verification_email(email_name)
     return '' # Implicit HTTP OK status.
 
-@app.route('/claim-access', methods=['POST'])
-def claim_access():
-    pass
+@app.route('/claim-access/<token>', methods=['GET'])
+def claim_access(token):
+    print('token is: <%s>' % token)
+    return ''
 
 
 #-----------------------------------------------------------------------------
