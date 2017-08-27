@@ -1,33 +1,67 @@
 """
 A REST API service that handles client authentication for all the services in
-this suite.
+this suite. Can be used by front end web guis or any other rest api clients.
 
 Clients can can use it to request access tokens. The other services can use
 these tokens to authorize access.
 
-A token is issued when a client can prove they own any dnae email address, and
-will be held by the client's computer for use in subsequent service requests.
+A token is issued when a client can prove they own any dnae email address, to be
+held by the client's computer for use in subsequent service requests.
+
+REad more about JWT and sec here....
 
 The authentication protocol is as follows:
 
-1) Client hits <request-access> endpoint, with <dnae-email-name> as payload.
+1) A client requests access to the suite of
+services, by posting a message to the <request-access> endpoint, with a 
+<dnae-email-name> as payload.  (Likely, but not necessarily  from a front end 
+gui.)
 
-2) Server composes a claim access JWT that:
-    - states its 'audience' to be "claimaccess"
-    - specifies a time limit of 5 minutes hence
+2) The server sends a mail to the alleged email address @ dnae.com that includes
+a clickable link. When the user clicks on the link from their email client it
+will launch a browser window pointing to the URL given by the link.
 
-3) Server sends an email to <dnae-email-name>@dnae.com, with a clickable link
-   in it that includes both the <claim-access> endpoint and the url-encoded JWT.
+The security model is that if a person can receive this message sent to a dnae
+email address - then they should be trusted (for one month - tbd).
 
-   i.e.
+3) The link in the email will have been formulated by the server that sent the
+email, to encode the following information in the URL's path - in the form of a
+cryptographically protected JWT.
 
-   this-server::/claim-access/<claim access jwt>
+- The email address used.
+- A 5 minute window during which the link must be used before it expires.
+- The purpose of the JWT - i.e. 'claim access'.
 
-4) Server replies OK if the email got sent.
+4) The root of the URL will likely be a GUI front end app for this suite of
+services that knows what to do next to gain access - but this service doesn't
+know or care what that URL is - and requires it be injected via an environment
+variable. (See config docco).
 
-5) Some time later, the user clicks the link from the email they received.
+5) :w
 
-6) The server receives the request on <claim-access>, and will grant access if
+
+
+4) Server replies OK if the email got sent. And apart from that does nothing.
+(yet)
+
+5) Some time later, the user clicks the link from the email they received. Which
+will take them into their web browser - pointing at the 'claim access' URL in 
+from the link.
+
+6) The server receives the request on <claim-access>, and will conduct
+non-repudiation, and expiry validation of the token. If these are met, it can be
+certain that the sender received the email at a dnae email address. And therefore
+access should be granted to the owner of that email address. It then returns a
+redirect to the client's browser
+
+7)
+
+
+
+
+
+access can be granted to the client machine from which the email link was clicked.
+
    the JWT non-repudiation and data integrity checks pass, and the request has
    not expired.
 
@@ -90,7 +124,7 @@ mail = Mail(app)
 
 
 #-----------------------------------------------------------------------------
-# API ENTRY POINT FUNCTIONS
+# API 
 #-----------------------------------------------------------------------------
 
 @app.route('/request-access', methods=['POST'])
@@ -102,9 +136,9 @@ def request_access():
 
 @app.route('/claim-access/<token>', methods=['GET'])
 def claim_access(token):
-    _validate_token(token)
-    print('token is: <%s>' % token)
-    return ''
+    _validate_token(token) # Replies early with error on validatation failure.
+    token = _assemble_access_granted_token()
+    return token
 
 
 #-----------------------------------------------------------------------------
@@ -173,6 +207,17 @@ def _validate_token(token):
         abort(401, 
             """The audience cited in the submitted Claim Access Token is 
             not right for this handler.""")
+
+def _assemble_access_granted_token():
+    expires_at = datetime.datetime.now() + datetime.timedelta(days=30)
+    payload = {
+        'exp': expires_at,
+        'aud': 'ACCESS_GRANTED' # aud is a reserved JWT keyword
+    }
+    encoded_jwt_as_bytes = jwt.encode(payload, _SECRET, algorithm=_ALGORITHM)
+    encoded_jwt_as_string = encoded_jwt_as_bytes.decode() # UTF-8
+    payload = { 'token': encoded_jwt_as_string }
+    return payload
 
 # Constants used internally only.
 
