@@ -12,8 +12,8 @@ The authentication protocol is as follows:
 
 1) Client hits <request-access> endpoint, with <dnae-email-name> as payload.
 
-2) Server composes a <claim-access> JWT that:
-    - states its claim to be "claim-access"
+2) Server composes a claim access JWT that:
+    - states its 'audience' to be "claimaccess"
     - specifies a time limit of 5 minutes hence
 
 3) Server sends an email to <dnae-email-name>@dnae.com, with a clickable link
@@ -21,7 +21,7 @@ The authentication protocol is as follows:
 
    i.e.
 
-   this-server::/claim-access/<claim-access-jwt>
+   this-server::/claim-access/<claim access jwt>
 
 4) Server replies OK if the email got sent.
 
@@ -97,10 +97,12 @@ mail = Mail(app)
 def request_access():
     email_name = _parse_email_name()
     _send_verification_email(email_name)
-    return '' # Implicit HTTP OK status.
+    return ''
+
 
 @app.route('/claim-access/<token>', methods=['GET'])
 def claim_access(token):
+    _validate_token(token)
     print('token is: <%s>' % token)
     return ''
 
@@ -135,6 +137,7 @@ def _send_verification_email(email_name):
     html = _assemble_verification_email()
     msg = Message(html=html, subject='Please confirm your email address.', 
             recipients=[recipient])
+    print('Email message sent is: %s' % html)
     mail.send(msg)
 
 
@@ -143,20 +146,36 @@ def _assemble_verification_email():
     expires_at = datetime.datetime.now() + datetime.timedelta(minutes=5)
     payload = {
         'exp': expires_at,
-        'aud': _CLAIM_ACCESS # aud is a reserved JWT keyword: audience
+        'aud': _CLAIM_ACCESS_AUDIENCE # aud is a reserved JWT keyword
     }
-    encoded_jwt = jwt.encode(payload, _SECRET, algorithm='HS256').decode()
+    encoded_jwt_as_bytes = jwt.encode(payload, _SECRET, algorithm=_ALGORITHM)
+    encoded_jwt_as_string = encoded_jwt_as_bytes.decode() # UTF-8
     server_name = app.config['VERIFICATION_EMAIL_CLICKABLE_LINK_URL']
     html_message = """
         If you just requested access to the DNAe software team's web services,
         please click the link below to prove that you own a DNAe email address.
         <p>
         <a href="%s%s/%s"> click here </a>
-    """ % (server_name, url_for('claim_access'), encoded_jwt)
+    """ % (server_name, '/claim-access', encoded_jwt_as_string)
     return html_message
 
 
+def _validate_token(token):
+    # Aborts request with error code 401 (not authorised) if the token fails
+    # validation checks.
+    try:
+        decoded = jwt.decode(token, _SECRET, 
+            audience=_CLAIM_ACCESS_AUDIENCE, algorithm=_ALGORITHM)
+    except jwt.ExpiredSignatureError:
+        abort(401, 
+            'The signature on the submitted Claim Access Token has expired.')
+    except jwt.InvalidAudienceError :
+        abort(401, 
+            """The audience cited in the submitted Claim Access Token is 
+            not right for this handler.""")
+
 # Constants used internally only.
 
-_CLAIM_ACCESS = 'claim-access'
+_CLAIM_ACCESS_AUDIENCE = 'claim access audience'
 _SECRET = 'foobar'
+_ALGORITHM = 'HS256'
