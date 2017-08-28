@@ -1,13 +1,16 @@
-# What is this?
+# Overview
 
-- A REST service implemented in Flask.
-- Offers endpoints that let a client request access to the suite of services.
-- Based on email account verification and the issuing of JWTs.
+This is a web service API that provides authentication services for the suite of 
+internet services of which it forms part.
 
-# Deployment and Configuration
+It is based on the "The OAuth 2.0 Authorization Framework: Bearer Token Usage"
+standard:  https://tools.ietf.org/html/rfc6750
 
-You must set an environment variable AUTH_FLASK_SETTINGS to point to a standard form Flask
-configuration file.
+And adopts Jason Web Tokens (JWT) as its token standard:
+https://en.wikipedia.org/wiki/JWT
 
-See http://flask.pocoo.org/docs/0.12/config/
+It encapsulates a security model that treats users as being anonymous, but
+requires them to prove they own a DNAe email address to gain access, thus
+denying access to the general public.
 
+See additional documentation in the *docs* sub directory.
