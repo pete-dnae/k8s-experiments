@@ -29,8 +29,16 @@ mail = Mail(app)
 Clients initiate their request for an access token here.
 Payload includes an alleged DNAe email address and the URL the client wishes
 to be called as a callback after the email ownership has been confirmed.
+Responds with an http status code only.
 
-See API documentation for details.
+curl --request POST \
+  --url http://127.0.0.1:5000/request-access \
+  --header 'content-type: application/json' \
+  --data '{
+        "EmailName": "pete.howard",
+        "Callback": "127.0.0.1:5000/claim-access"
+    }'
+
 """
 @app.route('/request-access', methods=['POST'])
 def request_access():
@@ -46,18 +54,17 @@ will have added a <claim-acces> JWT to the URL so the client can retrieve it. Th
 client should then POST a request to this end point, providing the JWT as payload.
 If the JWT passes integrity and non-repudiation checks, and the expiry date has
 not been reached, and the audience properly cites this end point, then
-authorisation will be granted. In which case a responsea is sent comprising a 
+authorisation will be granted. In which case a response is sent comprising a 
 new <ACCESS-GRANTED> JWT. The client should store this client-side for subsequent
 use. Otherwise the repsonse is the http NOT AUTHORISED error code.
 
-See API documentation for details.
+curl --request GET \
+  --url http://127.0.0.1:5000/claim-access/eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJjbGFpbSBhY2Nlc3MgYXVkaWVuY2UiLCJleHAiOjE1MDQwNDMzNjh9.WpHFIdzGkxEz7QWYXSHQq6TYbekGU_nhibD7ID8gQ9g \
+  --header 'content-type: application/json'
 """
 @app.route('/claim-access/<token>', methods=['GET'])
 def claim_access(token):
-    print('Arrived claim_access')
-    print('Validating claim access token')
-    print('Assembling ag token')
-    _validate_claim_access_token(token)
+    _assert_token_is_valid(token, _CLAIM_ACCESS_AUDIENCE )
     token = _assemble_access_granted_token()
     print('Token is: %s' % token)
     return jsonify(token)
@@ -65,21 +72,25 @@ def claim_access(token):
 
 """
 This end point can be used by any of the services in this suite that wish to
-allow access only to clients who can present the <ACCESS_GRANTED> tokens issued 
-by this authenticaion service. It responds with http OK or http NOT AUTHORISED.
+allow access only to clients who can present the <ACCESS_GRANTED> tokens that
+have been issued by this authenticaion service. It responds with http OK or 
+http NOT AUTHORISED.
 
-See API documentation for details.
+curl --request POST \
+  --url http://127.0.0.1:5000/verify-access-token \
+  --header 'content-type: application/json' \
+  --data '{
+          "Token":
+          "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJhY2Nlc3MgZ3JhbnRlZCIsImV4cCI6MTUwNjYzNTc4M30.QzQJOlRshvyHHkiUTfz7uqIt3En0Hap1fby4sZkbRxc"
+    }'
+
+
 """
 @app.route('/verify-access-token', methods=['POST'])
-def verify_access_token(token):
-    """
-    todo
-    parse token
-    check it with reusable fn
-    reply accordingly
-    """
-    pass
-
+def verify_access_token():
+    token = _parse_verify_access_payload()
+    _assert_token_is_valid(token, _ACCESS_GRANTED_AUDIENCE )
+    return ''
 
 #-----------------------------------------------------------------------------
 # INTERNAL, IMPLEMENTATION FUNCTIONS
@@ -110,6 +121,31 @@ def _parse_request_access_payload():
         abort(400, msg)
 
     return email_name, callback
+
+
+"""
+Extracts the required fields from the <VERIFY-ACCESS> request.
+Any exceptions raised are logged, and trigger an immediate code 400 error with 
+an explanation.
+"""
+def _parse_verify_access_payload():
+
+    try:
+        json = request.get_json()
+        validate(json, {
+            "type": "object",
+            "properties": {
+                "Token": { "type": "string" },
+            }
+        })
+        token = json['Token']
+
+    except Exception as e:
+        msg = 'Failed to parse payload: %s\n' % e
+        print(msg)
+        abort(400, msg)
+
+    return token
 
 
 """
@@ -151,14 +187,14 @@ def _assemble_verification_email(client_callback_url):
 
 
 """
-Validates a <CLAIM-ACCESS> token using standard JWT means.
-Responds to the current request immediately with a http NOT AUTHORISED code at 
+Validates a JWT token using standard JWT means.
+Responds to the current request immediately with a http NOT AUTHORISED code at
 the first encountered failure. Returns None.
 """
-def _validate_claim_access_token(token):
+def _assert_token_is_valid(token, intended_audience):
     try:
         decoded = jwt.decode(token, _SECRET, 
-            audience=_CLAIM_ACCESS_AUDIENCE, algorithm=_ALGORITHM)
+            audience=intended_audience, algorithm=_ALGORITHM)
     except jwt.ExpiredSignatureError:
         abort(401, 
             'The signature on the submitted Claim Access Token has expired.')
@@ -175,16 +211,17 @@ def _assemble_access_granted_token():
     expires_at = datetime.datetime.now() + datetime.timedelta(days=30)
     payload = {
         'exp': expires_at,
-        'aud': 'ACCESS_GRANTED' # aud is a reserved JWT keyword
+        'aud': _ACCESS_GRANTED_AUDIENCE # aud is a reserved JWT keyword
     }
     encoded_jwt_as_bytes = jwt.encode(payload, _SECRET, algorithm=_ALGORITHM)
     encoded_jwt_as_string = encoded_jwt_as_bytes.decode() # UTF-8
-    payload = { 'token': encoded_jwt_as_string }
+    payload = { 'Token': encoded_jwt_as_string }
     return payload
 
 
 # Constants used internally only.
 
 _CLAIM_ACCESS_AUDIENCE = 'claim access audience'
+_ACCESS_GRANTED_AUDIENCE = 'access granted'
 _SECRET = 'foobar'
 _ALGORITHM = 'HS256'
