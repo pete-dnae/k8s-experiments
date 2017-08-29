@@ -6,7 +6,7 @@ internet services of which it forms part.
 It is based on the "The OAuth 2.0 Authorization Framework: Bearer Token Usage"
 standard:  https://tools.ietf.org/html/rfc6750
 
-And adopts Jason Web Tokens (JWT) as its token standard:
+It adopts Jason Web Tokens (JWT) as its Token standard:
 https://en.wikipedia.org/wiki/JWT
 
 It encapsulates a security model that treats users as being anonymous, but

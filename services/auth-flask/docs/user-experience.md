@@ -29,6 +29,7 @@ explain that this is the case, and offer them a button to re-send the email.
 
 Eventually, maybe one month later, they will hit the end of the period for which
 they have been granted access. At this point their user experience will revert to
-being identical to that of a completely new potential user as described above.
+being almost identical to that of a completely new potential user as 
+described above.
 
 

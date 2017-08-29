@@ -17,8 +17,9 @@ their_name@dnae.com as proof that they belong to DNAe and to be granted access.
 
 ## Vulnerabilities
 
-While the scheme is robust from a cryptographic point of view, it does have 
-conceptual vulnerabilities listed here.
+While the scheme adopts a well adopted pattern, and is (for the most part) robust
+from a cryptographic point of view, it does have conceptual vulnerabilities
+listed here.
 
 It is the *computer* that the DNAe person uses to verify their email that gets
 given access, not the human user. This computer cannot be relied upon to be under
@@ -27,13 +28,13 @@ the user having verified their ownership of a DNAe email address using the email
 function in the Office 365 web app. Thus any other person who can login to that
 computer will be able to access the web software.
 
-The access granted has an expiry date, which could be set so far ahead to be 
-effectively for ever, or for whatever shorter interval we choose. Maybe one
-month. In the former case, a user would only ever have to prove their ownership
-of a DNAe email address once (per computer). But this makes it impossible for
-access to be rescinded for any one individual user. For this reason, a one month
-period is often chosen, after which a user is required to re-verify their email
-address.
+The access granted has an expiry date which we can program. The date could be set
+so far ahead to be effectively for ever, or for whatever shorter interval we
+choose. Maybe one month. In the former case, a user would only ever have to prove
+their ownership of a DNAe email address once (per computer). But this makes it
+impossible for access to be rescinded for any one individual user. For this
+reason, a one month period is often chosen, after which a user is required to
+re-verify their email address.
 
 There is a burden of trust on the person responding to the auto-generated
 verification email not to share that email with people outside DNAe, because
