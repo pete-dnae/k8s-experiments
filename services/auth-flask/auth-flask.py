@@ -1,5 +1,5 @@
 """
-A REST API service that handles client authentication for all the services in
+A REST API service providing authentication for all the services in
 this suite.
 
 See documentation in ./docs directory.
@@ -14,6 +14,8 @@ from flask import Flask, request, abort, url_for, jsonify
 from jsonschema import validate
 from flask_mail import Mail, Message
 import jwt
+
+print('jwt contents: %s' % dir(jwt))
 
 app = Flask(__name__)
 app.config.from_envvar('APP_CONFIG_FILE')
