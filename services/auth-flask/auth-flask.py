@@ -16,7 +16,7 @@ from flask_mail import Mail, Message
 import jwt
 
 app = Flask(__name__)
-app.config.from_envvar('AUTH_FLASK_SETTINGS')
+app.config.from_envvar('APP_CONFIG_FILE')
 
 mail = Mail(app)
 

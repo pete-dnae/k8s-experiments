@@ -3,12 +3,7 @@ A Flask REST API that replies to POST requests, regardless of path, with a
 JSON object that represents a graph of a sin wave. I.e. a list of x/y points.
 
 How finely-spaced the points are is determined from the request's POST JSON
-payload. Like this.
-
-{
-    "intervals": 12
-}
-
+payload. 
 """
 
 import math
@@ -18,6 +13,19 @@ from jsonschema import validate
 
 app = Flask(__name__)
 
+#----------------------------------------------------------------------------
+# API
+#----------------------------------------------------------------------------
+
+
+"""
+A list of points on a sin wave graph like this: ((x1,y1), (x2,y2), ... (xn,yn)).
+
+The request must specify how many points like this:
+
+    { "intervals": 12 }
+
+"""
 
 @app.route('/', methods=['POST'])
 def graph_points():
@@ -35,11 +43,12 @@ def graph_points():
                     "minimum": 8,
                     "maximum": 200,
                 }
-            }
+            },
+            "required": ["intervals"]
         })
         intervals = json['intervals']
     except Exception as e:
-        abort(400, e)
+        abort(400, str(e))
 
     # The other sin wave parameters are hard coded.
     ampl = 2

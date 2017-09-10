@@ -1,0 +1,23 @@
+#!/bin/bash -x
+
+# Set up development environment for any of the services in this suite - in
+# development mode - using a standard pattern.
+
+echo=on
+
+if [ $# -eq 0 ]
+  then echo "Error: Specify service directory name as first argument."
+fi
+
+repo_root=~/k8s-experiments
+app_name=$1
+
+cd $repo_root/services/$app_name
+
+source  ~/venvs/$app_name/bin/activate
+
+
+# Standard Flask settings
+export FLASK_APP=$repo_root/services/$app_name/$app_name.py
+export FLASK_DEBUG=1
+export APP_CONFIG_FILE=$repo_root/configs/$app_name/config-for-development.cfg
