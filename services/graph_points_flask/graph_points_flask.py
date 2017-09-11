@@ -3,7 +3,7 @@ A Flask REST API that replies to POST requests, regardless of path, with a
 JSON object that represents a graph of a sin wave. I.e. a list of x/y points.
 
 How finely-spaced the points are is determined from the request's POST JSON
-payload. 
+payload..
 """
 
 import math
