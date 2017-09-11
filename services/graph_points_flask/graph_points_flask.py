@@ -19,11 +19,12 @@ app = Flask(__name__)
 
 
 """
-A list of points on a sin wave graph like this: ((x1,y1), (x2,y2), ... (xn,yn)).
+A list of points on a sin wave graph like this: [[x1,y1], [x2,y2], ... [xn,yn]].
 
 The request must specify how many points like this:
 
-    { "intervals": 12 }
+    curl -d '{"intervals": 12}' -H "Content-Type: application/json" \
+    -X POST http://localhost:5000 
 
 """
 
