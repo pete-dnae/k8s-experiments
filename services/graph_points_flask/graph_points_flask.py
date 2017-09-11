@@ -1,5 +1,5 @@
 """
-A Flask REST API that replies to POST requests, regardless of path, with a 
+A Flask REST API that replies to POST requests, regardless of path, with a
 JSON object that represents a graph of a sin wave. I.e. a list of x/y points.
 
 How finely-spaced the points are is determined from the request's POST JSON
@@ -24,9 +24,10 @@ A list of points on a sin wave graph like this: [[x1,y1], [x2,y2], ... [xn,yn]].
 The request must specify how many points like this:
 
     curl -d '{"intervals": 12}' -H "Content-Type: application/json" \
-    -X POST http://localhost:5000 
+    -X POST http://localhost:5000
 
 """
+
 
 @app.route('/', methods=['POST'])
 def graph_points():
@@ -54,7 +55,7 @@ def graph_points():
     # The other sin wave parameters are hard coded.
     ampl = 2
     cycles = 3
-    
+
     # Build list of points
     points = []
     for i in range(intervals + 1):
