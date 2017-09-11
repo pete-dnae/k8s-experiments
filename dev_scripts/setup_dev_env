@@ -20,4 +20,4 @@ source  ~/venvs/$app_name/bin/activate
 # Standard Flask settings
 export FLASK_APP=$repo_root/services/$app_name/$app_name.py
 export FLASK_DEBUG=1
-export APP_CONFIG_FILE=$repo_root/configs/$app_name/config-for-development.cfg
+export APP_CONFIG_FILE=$repo_root/configs/$app_name/config_for_development.cfg

@@ -15,7 +15,6 @@ from jsonschema import validate
 from flask_mail import Mail, Message
 import jwt
 
-print('jwt contents: %s' % dir(jwt))
 
 app = Flask(__name__)
 app.config.from_envvar('APP_CONFIG_FILE')
@@ -33,13 +32,13 @@ Payload includes an alleged DNAe email address and the URL the client wishes
 to be called as a callback after the email ownership has been confirmed.
 Responds with an http status code only.
 
-curl --request POST \
-  --url http://127.0.0.1:5000/request-access \
-  --header 'content-type: application/json' \
-  --data '{
-        "EmailName": "pete.howard",
-        "Callback": "127.0.0.1:5000/claim-access"
-    }'
+    curl --request POST \
+      --url http://127.0.0.1:5000/request-access \
+      --header 'content-type: application/json' \
+      --data '{ 
+            "EmailName": "pete.howard", 
+            "Callback": "127.0.0.1:5000/claim-access" 
+        }'
 
 """
 @app.route('/request-access', methods=['POST'])
