@@ -1,9 +1,9 @@
 """
-This module containts the unit tests for the service implemented by the 
-auth_flask.py module. The tests however, do not require the service to be 
-running because a Flask app is capable of exposing a test client which we
-can then use as a proxy to send it requests directly. The test client is
-created in the setUp() method.
+This module containts the unit tests (and example usage) for the service
+implemented by the auth_flask.py module. The tests however, do not require the
+service to be running because a Flask app is capable of exposing a test client
+which we can then use as a proxy to send it requests directly. The test client
+is created in the tests' setUp() method. 
 """
 
 import os
@@ -14,16 +14,77 @@ import re
 import auth_flask
 
 
-REQUEST_ACCESS = '/request-access'
+"""
+This class documents the service's API by showing example usage.
+"""
+class DemonstratesUsage(unittest.TestCase):
 
-EXAMPLE_CALLBACK = 'some url'
-
-PROPERLY_FORMED_REQUEST_PAYLOAD = { 
-    'EmailName':'john.doe',
-    'Callback': EXAMPLE_CALLBACK
-} 
+    def setUp(self):
+        auth_flask.app.testing = True # Suppress sending real emails.
+        self.test_client = auth_flask.app.test_client()
 
 
+    """ 
+    The first thing the client must do is request access by POST-ing a request
+    to the 'request_access' end point.
+
+    This is likely javascript code in a web app, but we can do the same thing
+    here in python.
+    """
+    def test_demonstrate_first_step(self):
+        payload = { 
+            'EmailName':'john.doe', # Alleged dnae email owner.
+
+            # The user receives an email with a clickable link in it of this
+            # form: your_callback_url/claim_access_jwt_as_text.
+            # You provide <your_callback_url> here.
+            'Callback': 'http::/myhost/my_callback_path'
+        } 
+        self.test_client.post(
+            '/request_access', 
+            data = json.dumps(payload), 
+            content_type='application/json')
+        # If all is well you will get back a 200 (OK) respose.
+        # Else a 400 (Invalid request) response.
+
+
+    """ 
+    The second step of the process happens when the user clicks on the link on
+    the email they receive. Their email client will bring up a browser window
+    pointing at whatever web app the client specified in the call back URL in
+    the previous step. Again likely a javascript web app.
+
+    We can illustrate this with this python test as follows.
+    """
+    def test_demonstrate_second_step(self):
+        fart ask a service helper fn to make a real email link
+        clickable_url_in_email = '/my_callback_path/the_rest_of_the_url'
+        # Harvest the claim access token from the last segment
+        claim_access_token = clickable_url_in_email.replace(
+            '/my_callback_path/', '')
+        # Send a POST request to 'claim_access' to receive back a
+        # 'access_granted' JWT.
+        payload = { 
+            'ClaimAccessToken': claim_access_token
+        } 
+        response = self.test_client.post(
+            '/claim_access', 
+            data = json.dumps(payload), 
+            content_type='application/json')
+        fart have conditional code that depends on ok or not auth
+        when auth save access_granted
+
+        add another test that hsow how you use the token
+
+
+
+
+
+"""
+The first step that clients using the authentiation service must take is
+to request access using the 'request_access' end point. This class contains the
+units tests for this end point.
+"""
 class RequestAccessEndPointTestCase(unittest.TestCase):
 
     def setUp(self):
@@ -34,18 +95,33 @@ class RequestAccessEndPointTestCase(unittest.TestCase):
         self.mail = auth_flask.mail
 
     """
-    The REQUEST_ACCESS end point is designed to return nothing
-    other than an 200 (OK) return code when the request is properly formed..
+    The _REQUEST_ACCESS end point is designed to return nothing
+    other than a 200 (OK) return code when the request is properly formed..
     """
     def test_response_is_empty_for_properly_formed_request(self):
-        response = self.test_client.post(REQUEST_ACCESS,
-            data = json.dumps(PROPERLY_FORMED_REQUEST_PAYLOAD), 
+        response = self.test_client.post(_REQUEST_ACCESS,
+            data = json.dumps(_PROPERLY_FORMED_REQUEST_PAYLOAD), 
             content_type='application/json')
 
         self.assertEqual(
             response.status_code, 200, 'Wrong html response code.')
         self.assertEqual(
             b'', response.data, 'Response data should be empty string')
+
+
+    """
+    The _REQUEST_ACCESS end point is designed to return 400 (Invalid Request)
+    return code when the request is improperly formed.
+    """
+    def test_response_is_invalid_request_for_malformed_request(self):
+        response = self.test_client.post(_REQUEST_ACCESS,
+            data = json.dumps(MALFORMED_REQUEST_PAYLOAD), 
+            content_type='application/json')
+
+        self.assertEqual(
+            response.status_code, 400, 'Wrong html response code.')
+        self.assertTrue(b'Failed to parse payload' in response.data)
+        self.assertTrue(b'EmailName' in response.data)
 
     """
     Most of the business logic behind this end point is concerned with 
@@ -56,11 +132,14 @@ class RequestAccessEndPointTestCase(unittest.TestCase):
 
         # The flask app is set to testing mode in the setup method, which 
         # will cause flask mail to suppress the sending of real mails. But the
-        # mail package offers to 'record' virtually-sent mails for us like this...
+        # mail package offers to 'record' virtually-sent mails for us 
+        # like this...
         with self.mail.record_messages() as outbox:
 
-            response = self.test_client.post(REQUEST_ACCESS,
-                data = json.dumps(PROPERLY_FORMED_REQUEST_PAYLOAD), 
+            # Send the request that will cause the verification email to
+            # get sent.
+            response = self.test_client.post(_REQUEST_ACCESS,
+                data = json.dumps(_PROPERLY_FORMED_REQUEST_PAYLOAD), 
                 content_type='application/json')
 
             # Ensure a mail got sent by retreiving it.
@@ -72,21 +151,19 @@ class RequestAccessEndPointTestCase(unittest.TestCase):
             html_content = email.html
             self.assertEqual(subject, 'Please confirm your email address.')
 
-
-            self._scrutinise_html_content(html_content)
+            # Delegate the scrutiny of the email's contents to a helper
+            # function..
+            self._scrutinise_email_html_content(html_content)
 
 
     #-------------------------------------------------------------------------
     # Internal helper methods
     #-------------------------------------------------------------------------
 
-    def _scrutinise_html_content(self, html_content):
-
-            print('full html: %s' % html_content)
+    def _scrutinise_email_html_content(self, html_content):
 
             # This regex ensures the message starts right, then captures the 
             # href parameter for the <a> link.
-            
             p = re.compile(
                 r'\s.*If you just requested.*<a href="(.*)"> click here </a>',
                 re.DOTALL)
@@ -95,39 +172,35 @@ class RequestAccessEndPointTestCase(unittest.TestCase):
 
             # The href URL should start with the callback URL provided by
             # the request's POST payload.
-
             href_content = match.group(1)
             self.assertTrue(
-                href_content.startswith(EXAMPLE_CALLBACK + '/'))
+                href_content.startswith(_EXAMPLE_CALLBACK + '/'))
 
             # Isolate what follows; which should be the JWT as text.
-            jwt_portion = href_content.replace(EXAMPLE_CALLBACK + '/', '')
+            jwt_portion = href_content.replace(_EXAMPLE_CALLBACK + '/', '')
 
             # Validate the JWT - delegating to a helper in the implementation
-            # module.
-
-            auth_flask.assert_token_is_valid(jwt_portion. etc
-
-            todo got fart to here
-            should this test access the private secret from the impl module?
-            try:
-                decoded = jwt.decode(jwt_portion, _SECRET, audience=intended_audience, algorithm=_ALGORITHM) except jwt.ExpiredSignatureError:
-            except jwt.InvalidAudienceError :
-
-            print('jwt_portion: %s' % jwt_portion)
-
-
-            # isolate ,<a...>
-            # then href
-            # bit before and after /
-            # fist bit is callback
-            # second bit is jwt
-            # jwt parses
-            # jwt bits as expected
+            # module. (Raises exception on validation failure).
+            auth_flask.assert_claim_access_token_is_valid(jwt_portion)
 
 
 
+# Private constants used internally only.
 
+_REQUEST_ACCESS = '/request-access'
+
+_EXAMPLE_CALLBACK = 'some url'
+
+
+MALFORMED_REQUEST_PAYLOAD = { 
+    'unexpected_key':'john.doe',
+    'Callback': _EXAMPLE_CALLBACK
+} 
+
+_PROPERLY_FORMED_REQUEST_PAYLOAD = { 
+    'EmailName':'john.doe',
+    'Callback': _EXAMPLE_CALLBACK
+} 
 
 if __name__ == '__main__':
     unittest.main()

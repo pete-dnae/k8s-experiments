@@ -2,7 +2,10 @@
 A REST API service providing authentication for all the services in
 this suite.
 
-See documentation in ./docs directory.
+The API documentation is provided in the form of dedicated exemplar unit 
+tests in auth_flask_examples.py
+
+See other documentation in ./docs directory.
 """
 
 
@@ -31,15 +34,6 @@ Clients initiate their request for an access token here.
 Payload includes an alleged DNAe email address and the URL the client wishes
 to be called as a callback after the email ownership has been confirmed.
 Response is an http status code, and an empty body.
-
-    curl --request POST \
-      --url http://127.0.0.1:5000/request-access \
-      --header 'content-type: application/json' \
-      --data '{ 
-            "EmailName": "pete.howard", 
-            "Callback": "127.0.0.1:5000/claim-access" 
-        }'
-
 """
 @app.route('/request-access', methods=['POST'])
 def request_access():
@@ -50,21 +44,19 @@ def request_access():
 
 """
 This end point is used by the software at the end of the client's callback URL
-provided above, and is the second leg of the authentication process. This server
-will have added a <claim-acces> JWT to the URL so the client can retrieve it. The
-client should then POST a request to this end point, providing the JWT as payload.
-If the JWT passes integrity and non-repudiation checks, and the expiry date has
-not been reached, and the audience properly cites this end point, then
-authorisation will be granted. In which case a response is sent comprising a 
-new <ACCESS-GRANTED> JWT. The client should store this client-side for subsequent
-use. Otherwise the repsonse is the http NOT AUTHORISED error code.
-
-curl --request GET \
-  --url http://127.0.0.1:5000/claim-access/eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJjbGFpbSBhY2Nlc3MgYXVkaWVuY2UiLCJleHAiOjE1MDQwNDMzNjh9.WpHFIdzGkxEz7QWYXSHQq6TYbekGU_nhibD7ID8gQ9g \
-  --header 'content-type: application/json'
+provided above, and is the second leg of the authentication process.  This
+server will have added a <claim-acces> JWT to that URL so the client can
+retrieve it. The client should then POST a request to this end point, providing
+the JWT as payload.  If the JWT passes integrity and non-repudiation checks,
+and the expiry date has not been reached, and the audience properly cites this
+end point, then authorisation will be granted. In which case a response is sent
+comprising a new <ACCESS-GRANTED> JWT. The client should store this client-side
+for subsequent use. Otherwise the repsonse is the http NOT AUTHORISED error
+code.
 """
-@app.route('/claim-access/<token>', methods=['GET'])
-def claim_access(token):
+@app.route('/claim-access', methods=['POST'])
+def claim_access():
+    token = _parse_claim_access_payload()
     _assert_token_is_valid(token, _CLAIM_ACCESS_AUDIENCE )
     token = _assemble_access_granted_token()
     return jsonify(token)
@@ -75,22 +67,30 @@ This end point can be used by any of the services in this suite that wish to
 allow access only to clients who can present the <ACCESS_GRANTED> tokens that
 have been issued by this authenticaion service. It responds with http OK or 
 http NOT AUTHORISED.
-
-curl --request POST \
-  --url http://127.0.0.1:5000/verify-access-token \
-  --header 'content-type: application/json' \
-  --data '{
-          "Token":
-          "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJhY2Nlc3MgZ3JhbnRlZCIsImV4cCI6MTUwNjYzNTc4M30.QzQJOlRshvyHHkiUTfz7uqIt3En0Hap1fby4sZkbRxc"
-    }'
-
-
 """
 @app.route('/verify-access-token', methods=['POST'])
 def verify_access_token():
     token = _parse_verify_access_payload()
     _assert_token_is_valid(token, _ACCESS_GRANTED_AUDIENCE )
     return ''
+
+
+#-----------------------------------------------------------------------------
+# Methods exposed publicly only to support testing.
+#-----------------------------------------------------------------------------
+
+"""
+Helper function for unit tests to assert that a given token, if presented to
+the claim_access end point would validate successfully.  We provide this helper
+function to avoid the need for leaking the module-scope_SECRET that the JWT is
+signed with outside this module.  The outcome is indicated by allowing the
+exceptions raised inside the jwt package to be propagated if the validation
+fails.
+"""
+def assert_claim_access_token_is_valid(token):
+        decoded = jwt.decode(token, _SECRET, 
+            audience = _CLAIM_ACCESS_AUDIENCE , algorithms=[_ALGORITHM])
+
 
 #-----------------------------------------------------------------------------
 # INTERNAL, IMPLEMENTATION FUNCTIONS
@@ -158,8 +158,9 @@ def _send_verification_email(email_name, client_callback_url):
     msg = Message(html=html, subject='Please confirm your email address.', 
             recipients=[recipient])
 
-    # You can defeat real mails from getting sent by setting MAIL_SUPPRESS_SEND in the flask mail config.
-    # Read more here: https://pythonhosted.org/Flask-Mail/
+    # See the flask_mail package (or the unit tests for this module), for how 
+    # to suppress the real sending of mails in this call, and how to instead,
+    # record the mails that would have been sent - for scrutiny by tests.
     mail.send(msg)
 
 
@@ -175,7 +176,7 @@ def _assemble_verification_email(client_callback_url):
         'exp': expires_at,
         'aud': _CLAIM_ACCESS_AUDIENCE # aud is a reserved JWT keyword
     }
-    encoded_jwt_as_bytes = jwt.encode(payload, _SECRET, algorithm=_ALGORITHM)
+    encoded_jwt_as_bytes = jwt.encode( payload, _SECRET, algorithm=_ALGORITHM)
     encoded_jwt_as_string = encoded_jwt_as_bytes.decode() # UTF-8
     html_message = """
         If you just requested access to the DNAe software team's web services,
@@ -187,14 +188,14 @@ def _assemble_verification_email(client_callback_url):
 
 
 """
-Validates a JWT token using standard JWT means.
-Responds to the current request immediately with a http NOT AUTHORISED code at
-the first encountered failure. Returns None.
+Validates a JWT token using standard JWT means in the context of the current
+request. Responds to the current request immediately with a http 
+NOT AUTHORISED code at the first encountered failure. Returns None.
 """
 def _assert_token_is_valid(token, intended_audience):
     try:
         decoded = jwt.decode(token, _SECRET, 
-            audience=intended_audience, algorithm=_ALGORITHM)
+            audience=intended_audience, algorithms=[_ALGORITHM])
     except jwt.ExpiredSignatureError:
         abort(401, 
             'The signature on the submitted Claim Access Token has expired.')
@@ -213,15 +214,16 @@ def _assemble_access_granted_token():
         'exp': expires_at,
         'aud': _ACCESS_GRANTED_AUDIENCE # aud is a reserved JWT keyword
     }
-    encoded_jwt_as_bytes = jwt.encode(payload, _SECRET, algorithm=_ALGORITHM)
+    encoded_jwt_as_bytes = jwt.encode(
+        payload, _SECRET, algorithms=[_ALGORITHM])
     encoded_jwt_as_string = encoded_jwt_as_bytes.decode() # UTF-8
     payload = { 'Token': encoded_jwt_as_string }
     return payload
 
 
-# Constants used internally only.
+# Private constants used internally only.
 
 _CLAIM_ACCESS_AUDIENCE = 'claim access audience'
 _ACCESS_GRANTED_AUDIENCE = 'access granted'
-_SECRET = 'foobar'
+_SECRET = 'I1Oq9W1TQ7' # Arbitrary
 _ALGORITHM = 'HS256'
