@@ -30,7 +30,7 @@ mail = Mail(app)
 Clients initiate their request for an access token here.
 Payload includes an alleged DNAe email address and the URL the client wishes
 to be called as a callback after the email ownership has been confirmed.
-Responds with an http status code only.
+Response is an http status code, and an empty body.
 
     curl --request POST \
       --url http://127.0.0.1:5000/request-access \
@@ -67,7 +67,6 @@ curl --request GET \
 def claim_access(token):
     _assert_token_is_valid(token, _CLAIM_ACCESS_AUDIENCE )
     token = _assemble_access_granted_token()
-    print('Token is: %s' % token)
     return jsonify(token)
 
 
@@ -118,7 +117,6 @@ def _parse_request_access_payload():
 
     except Exception as e:
         msg = 'Failed to parse payload: %s\n' % e
-        print(msg)
         abort(400, msg)
 
     return email_name, callback
@@ -143,7 +141,6 @@ def _parse_verify_access_payload():
 
     except Exception as e:
         msg = 'Failed to parse payload: %s\n' % e
-        print(msg)
         abort(400, msg)
 
     return token
@@ -160,8 +157,10 @@ def _send_verification_email(email_name, client_callback_url):
     html = _assemble_verification_email(client_callback_url)
     msg = Message(html=html, subject='Please confirm your email address.', 
             recipients=[recipient])
-    print('Mail that would be sent:%s\n' % msg)
-    #mail.send(msg)
+
+    # You can defeat real mails from getting sent by setting MAIL_SUPPRESS_SEND in the flask mail config.
+    # Read more here: https://pythonhosted.org/Flask-Mail/
+    mail.send(msg)
 
 
 """

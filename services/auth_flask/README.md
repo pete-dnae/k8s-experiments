@@ -1,16 +1,13 @@
 # Overview
 
-This is a web service API that provides authentication services for the suite of 
+This is a micro service that provides authentication services for the suite of 
 internet services of which it forms part.
 
-It is based on the "The OAuth 2.0 Authorization Framework: Bearer Token Usage"
-standard:  https://tools.ietf.org/html/rfc6750
+See additional documentation in the *docs* sub directory in this recommended order:
 
-It adopts Jason Web Tokens (JWT) as its Token standard:
-https://en.wikipedia.org/wiki/JWT
+- security_model.md
+- user-experience.md
+- authentication-protocol.md
 
-It encapsulates a security model that treats users as being anonymous, but
-requires them to prove they own a DNAe email address to gain access, thus
-denying access to the general public.
-
-See additional documentation in the *docs* sub directory.
+Rather than specify the API reference in a document - please refer to the exemplars at the beginning of the
+unit tests in ./auth_flask_test.py.
