@@ -1,0 +1,34 @@
+title Auth Service Interactions
+
+
+
+Operation->+WebGUI:RequestAccess
+WebGUI->+AuthService: RequestAccess:POST {EmailName, CallbackURL}
+AuthService ->+ UsersEmail: Email with ClickableLink
+note left of UsersEmail: /CallbackURL/<ClaimAccessJWT>
+AuthService->-WebGUI: OK | InvalidRequest
+
+WebGUI->-Operation: Done
+
+
+UsersEmail->-Operation: User clicked the link: /CallbackURL/<ClaimAccessJWT>
+
+Operation->+WebGUI:  /CallbackURL/<ClaimAccessJWT>:GET
+WebGUI->+AuthService: /ClaimAccess:POST {ClaimAccessJWT}
+AuthService->AuthService: Validate ClaimAccessJWT
+AuthService->-WebGUI: OK + AccessGrantedJWT | NotAuthorised
+WebGUI->WebGUI: Store AccessGrantedJWT locally
+WebGUI->-Operation: Done
+
+note over AnoService
+    Any Service That
+    Requires Authentication
+end note
+Operation->+AnoService:AnoServiceURL:POST {AnoServicePayload, AccessGrantedJWT}
+AnoService->+AuthService:/VerifyAccessToken:POST {AccessGrantedJWT}
+AuthService->AuthService: ValidateToken
+AuthService->-AnoService: OK | NotAuthorised
+AnoService->-Operation:ExpectedResponseFromAnoServiceURL | NotAuthorised
+
+
+

@@ -1,9 +1,10 @@
 """
-This module containts the unit tests (and example usage) for the service
-implemented by the auth_flask.py module. The tests however, do not require the
-service to be running because a Flask app is capable of exposing a test client
-which we can then use as a proxy to send it requests directly. The test client
-is created in the tests' setUp() method. 
+This module contains the unit tests (and example usage) for the service
+implemented by the auth_flask.py module.
+
+The tests however, do not require the service to be running because a Flask app
+is capable of exposing a test client which we can then use as a proxy to send
+it requests directly. The test client is created in the tests' setUp() method.
 """
 
 import os
@@ -27,12 +28,11 @@ class DemonstratesUsage(unittest.TestCase):
 
     """ 
     The first thing the client must do is request access by POST-ing a request
-    to the 'request_access' end point.
+    to the 'request-access' end point.
     """
-    def test_demonstrate_first_step(self):
+    def test_demonstrate_launching_request_for_access(self):
         payload = { 
             'EmailName':'john.doe', # Alleged dnae email owner.
-
             # The user will receive an email with a clickable link in it of 
             # this form: a_callback_url/claim_access_jwt_as_text.  You provide 
             # the callback url here.
@@ -52,7 +52,7 @@ class DemonstratesUsage(unittest.TestCase):
     pointing at whatever web app the client specified in the call back URL in
     the previous step. Again likely a javascript web app.
     """
-    def test_demonstrate_second_step(self):
+    def test_demonstrate_using_the_claim_access_jwt_to_claim_access(self):
         # We can't receive the email in this test, so we'll cheat, and ask
         # a helper function exposed by the service to tell us what the 
         # clickable link would be.
@@ -62,11 +62,11 @@ class DemonstratesUsage(unittest.TestCase):
 
         # Harvest the claim access token from the URL, which will have been
         # structured like this:
-        #   /mycallback_url/the_token_as_text
+        # /mycallback_url/the_token_as_text
 
         claim_access_token = email_clickable_link_url.replace(
             callback + '/', '')
-        # Send a POST request to the 'claim_access' end point to receive 
+        # Send a POST request to the 'claim-access' endpoint to receive 
         # back an 'access_granted' JWT.
         payload = { 
             'ClaimAccessToken': claim_access_token

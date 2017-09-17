@@ -1,13 +1,11 @@
 """
 A REST API service providing authentication for all the services in
-this suite.
+the suite of services of which it is part.
 
-The API documentation is provided in the form of dedicated exemplar unit 
-tests in auth_flask_examples.py
+See the ./docs directory for the security model and how it works..
 
-See other documentation in ./docs directory.
+See the ./auth_flask_tests.py for example usage and thus API documentation.
 """
-
 
 # Standard imports
 import datetime
@@ -80,10 +78,10 @@ def verify_access_token():
 #-----------------------------------------------------------------------------
 
 """
-Asserts that a given token, if presented to the claim_access end point would
+Asserts that a given token, if presented to the claim-access end point would
 validate successfully.  We expose this helper function to avoid the need for
-leaking the module-scope_SECRET that the JWT is signed with outside this
-module.  The outcome is indicated by allowing the exceptions raised inside the
+leaking outside this module the _SECRET that the JWT are signed with. 
+The outcome is indicated by allowing the exceptions raised inside the
 jwt package to be propagated if the validation fails.
 """
 def assert_claim_access_token_is_valid(token):
@@ -113,7 +111,7 @@ def make_clickable_link_url(callback_url):
 
 """
 Extracts the required fields from the <REQUEST-ACCESS> request.
-Any exceptions raised and trigger an immediate code 400 error with 
+Any exceptions raised trigger an immediate code 400 error with 
 an explanation.
 """
 def _parse_request_access_payload():
