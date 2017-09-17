@@ -139,18 +139,13 @@ an explanation.
 """
 def _parse_claim_access_payload():
     try:
-        json = request.get_json()
-        validate(json, {
-            "type": "object",
-            "properties": {
-                "ClaimAccessToken": { "type": "string" },
-            }
-        })
-        claim_access_token = json['ClaimAccessToken']
+        headers = request.headers
+        auth = headers['Authorization']
+        auth_type, auth_token = auth.split()
+        return auth_token
     except Exception as e:
-        msg = 'Failed to parse payload: %s\n' % e
+        msg = 'Failed to parse claim_access token: %s\n' % e
         abort(400, msg)
-    return claim_access_token
 
 
 """

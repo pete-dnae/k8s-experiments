@@ -15,10 +15,6 @@ import re
 import auth_flask
 
 
-"""
-This TestCase class is devoted to demonstrating and documenting the 
-service's API by showing example usage.
-"""
 class DemonstratesUsage(unittest.TestCase):
 
     def setUp(self):
@@ -27,7 +23,7 @@ class DemonstratesUsage(unittest.TestCase):
 
 
     """ 
-    The first thing the client must do is request access by POST-ing a request
+    The first thing the client must do is request access by POSTING a request
     to the 'request-access' end point.
     """
     def test_demonstrate_launching_request_for_access(self):
@@ -66,24 +62,22 @@ class DemonstratesUsage(unittest.TestCase):
 
         claim_access_token = email_clickable_link_url.replace(
             callback + '/', '')
-        # Send a POST request to the 'claim-access' endpoint to receive 
-        # back an 'access_granted' JWT.
-        payload = { 
-            'ClaimAccessToken': claim_access_token
-        } 
-        response = self.test_client.post(
-            '/claim-access', 
-            data = json.dumps(payload), 
-            content_type='application/json')
-        # For this test we should get OK, but the code can return
+
+        # Now we can actually claim access by sending this token to the
+        # claim-access service endpoint.
+        header = {'Authorization': 'Bearer %s' % claim_access_token}
+        response = self.test_client.post('/claim-access', headers=header)
+
+        # For this test we should get an OK response, but the code can return
         # 401 (Not Authorised) - with an explanation in the body.
         self.assertEqual(response.status_code, 200)
 
+        # Now we can capture the 'access granted' JWT returned from the
+        # response and save it locally for future use.
         response_json = json.loads(response.data.decode('utf-8'))
         access_granted_token = response_json['Token']
 
-        # The client should save the access granted token for subsequent use,
-        # as illustrated below.
+        # Save it locally.
 
 """
 The first step that clients using the authentiation service must take is
