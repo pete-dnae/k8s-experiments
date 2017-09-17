@@ -15,7 +15,8 @@ import auth_flask
 
 
 """
-This class documents the service's API by showing example usage.
+This TestCase class is devoted to demonstrating and documenting the 
+service's API by showing example usage.
 """
 class DemonstratesUsage(unittest.TestCase):
 
@@ -27,25 +28,22 @@ class DemonstratesUsage(unittest.TestCase):
     """ 
     The first thing the client must do is request access by POST-ing a request
     to the 'request_access' end point.
-
-    This is likely javascript code in a web app, but we can do the same thing
-    here in python.
     """
     def test_demonstrate_first_step(self):
         payload = { 
             'EmailName':'john.doe', # Alleged dnae email owner.
 
-            # The user receives an email with a clickable link in it of this
-            # form: your_callback_url/claim_access_jwt_as_text.
-            # You provide <your_callback_url> here.
+            # The user will receive an email with a clickable link in it of 
+            # this form: a_callback_url/claim_access_jwt_as_text.  You provide 
+            # the callback url here.
             'Callback': 'http::/myhost/my_callback_path'
         } 
-        self.test_client.post(
-            '/request_access', 
+        response = self.test_client.post(
+            '/request-access', 
             data = json.dumps(payload), 
             content_type='application/json')
-        # If all is well you will get back a 200 (OK) respose.
-        # Else a 400 (Invalid request) response.
+        # All you get back is 200 (OK), or 400 (Invalid Request).
+        self.assertEqual(response.status_code, 200)
 
 
     """ 
@@ -53,32 +51,39 @@ class DemonstratesUsage(unittest.TestCase):
     the email they receive. Their email client will bring up a browser window
     pointing at whatever web app the client specified in the call back URL in
     the previous step. Again likely a javascript web app.
-
-    We can illustrate this with this python test as follows.
     """
     def test_demonstrate_second_step(self):
-        fart ask a service helper fn to make a real email link
-        clickable_url_in_email = '/my_callback_path/the_rest_of_the_url'
-        # Harvest the claim access token from the last segment
-        claim_access_token = clickable_url_in_email.replace(
-            '/my_callback_path/', '')
-        # Send a POST request to 'claim_access' to receive back a
-        # 'access_granted' JWT.
+        # We can't receive the email in this test, so we'll cheat, and ask
+        # a helper function exposed by the service to tell us what the 
+        # clickable link would be.
+        callback = '/mycallback_url'
+        email_clickable_link_url = \
+            auth_flask.make_clickable_link_url(callback)
+
+        # Harvest the claim access token from the URL, which will have been
+        # structured like this:
+        #   /mycallback_url/the_token_as_text
+
+        claim_access_token = email_clickable_link_url.replace(
+            callback + '/', '')
+        # Send a POST request to the 'claim_access' end point to receive 
+        # back an 'access_granted' JWT.
         payload = { 
             'ClaimAccessToken': claim_access_token
         } 
         response = self.test_client.post(
-            '/claim_access', 
+            '/claim-access', 
             data = json.dumps(payload), 
             content_type='application/json')
-        fart have conditional code that depends on ok or not auth
-        when auth save access_granted
+        # For this test we should get OK, but the code can return
+        # 401 (Not Authorised) - with an explanation in the body.
+        self.assertEqual(response.status_code, 200)
 
-        add another test that hsow how you use the token
+        response_json = json.loads(response.data.decode('utf-8'))
+        access_granted_token = response_json['Token']
 
-
-
-
+        # The client should save the access granted token for subsequent use,
+        # as illustrated below.
 
 """
 The first step that clients using the authentiation service must take is

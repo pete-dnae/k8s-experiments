@@ -80,16 +80,31 @@ def verify_access_token():
 #-----------------------------------------------------------------------------
 
 """
-Helper function for unit tests to assert that a given token, if presented to
-the claim_access end point would validate successfully.  We provide this helper
-function to avoid the need for leaking the module-scope_SECRET that the JWT is
-signed with outside this module.  The outcome is indicated by allowing the
-exceptions raised inside the jwt package to be propagated if the validation
-fails.
+Asserts that a given token, if presented to the claim_access end point would
+validate successfully.  We expose this helper function to avoid the need for
+leaking the module-scope_SECRET that the JWT is signed with outside this
+module.  The outcome is indicated by allowing the exceptions raised inside the
+jwt package to be propagated if the validation fails.
 """
 def assert_claim_access_token_is_valid(token):
         decoded = jwt.decode(token, _SECRET, 
             audience = _CLAIM_ACCESS_AUDIENCE , algorithms=[_ALGORITHM])
+
+"""
+Builds a clickable link URL to go inside a verification email message.
+We expose this helper function so that unit tests can pretent they received
+the email sent to the user.
+"""
+def make_clickable_link_url(callback_url):
+    expires_at = datetime.datetime.now() + datetime.timedelta(minutes=5)
+    payload = {
+        'exp': expires_at,
+        'aud': _CLAIM_ACCESS_AUDIENCE # aud is a reserved JWT keyword
+    }
+    encoded_jwt_as_bytes = jwt.encode(payload, _SECRET, algorithm=_ALGORITHM)
+    encoded_jwt_as_string = encoded_jwt_as_bytes.decode() # UTF-8
+    link_url = '%s/%s' % (callback_url, encoded_jwt_as_string)
+    return link_url
 
 
 #-----------------------------------------------------------------------------
@@ -98,11 +113,10 @@ def assert_claim_access_token_is_valid(token):
 
 """
 Extracts the required fields from the <REQUEST-ACCESS> request.
-Any exceptions raised are logged, and trigger an immediate code 400 error with 
+Any exceptions raised and trigger an immediate code 400 error with 
 an explanation.
 """
 def _parse_request_access_payload():
-
     try:
         json = request.get_json()
         validate(json, {
@@ -114,17 +128,36 @@ def _parse_request_access_payload():
         })
         email_name = json['EmailName']
         callback = json['Callback']
-
     except Exception as e:
         msg = 'Failed to parse payload: %s\n' % e
         abort(400, msg)
-
     return email_name, callback
 
 
 """
+Extracts the required fields from the <CLAIM-ACCESS> request.
+Any exceptions raised trigger an immediate code 400 error with 
+an explanation.
+"""
+def _parse_claim_access_payload():
+    try:
+        json = request.get_json()
+        validate(json, {
+            "type": "object",
+            "properties": {
+                "ClaimAccessToken": { "type": "string" },
+            }
+        })
+        claim_access_token = json['ClaimAccessToken']
+    except Exception as e:
+        msg = 'Failed to parse payload: %s\n' % e
+        abort(400, msg)
+    return claim_access_token
+
+
+"""
 Extracts the required fields from the <VERIFY-ACCESS> request.
-Any exceptions raised are logged, and trigger an immediate code 400 error with 
+Any exceptions raised and trigger an immediate code 400 error with 
 an explanation.
 """
 def _parse_verify_access_payload():
@@ -138,11 +171,9 @@ def _parse_verify_access_payload():
             }
         })
         token = json['Token']
-
     except Exception as e:
         msg = 'Failed to parse payload: %s\n' % e
         abort(400, msg)
-
     return token
 
 
@@ -170,20 +201,13 @@ combinging it with the client's callback URL for the clickable link in the
 message.
 """
 def _assemble_verification_email(client_callback_url):
-
-    expires_at = datetime.datetime.now() + datetime.timedelta(minutes=5)
-    payload = {
-        'exp': expires_at,
-        'aud': _CLAIM_ACCESS_AUDIENCE # aud is a reserved JWT keyword
-    }
-    encoded_jwt_as_bytes = jwt.encode( payload, _SECRET, algorithm=_ALGORITHM)
-    encoded_jwt_as_string = encoded_jwt_as_bytes.decode() # UTF-8
+    link_url = make_clickable_link_url(client_callback_url)
     html_message = """
         If you just requested access to the DNAe software team's web services,
         please click the link below to prove that you own a DNAe email address.
         <p>
-        <a href="%s/%s"> click here </a>
-    """ % (client_callback_url, encoded_jwt_as_string)
+        <a href="%s"> click here </a>
+    """ % link_url
     return html_message
 
 
@@ -215,7 +239,7 @@ def _assemble_access_granted_token():
         'aud': _ACCESS_GRANTED_AUDIENCE # aud is a reserved JWT keyword
     }
     encoded_jwt_as_bytes = jwt.encode(
-        payload, _SECRET, algorithms=[_ALGORITHM])
+        payload, _SECRET, algorithm=_ALGORITHM)
     encoded_jwt_as_string = encoded_jwt_as_bytes.decode() # UTF-8
     payload = { 'Token': encoded_jwt_as_string }
     return payload
