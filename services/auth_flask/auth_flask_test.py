@@ -2,7 +2,7 @@
 This module contains the unit tests (and example usage) for the service
 implemented by the auth_flask.py module.
 
-The tests however, do not require the service to be running because a Flask app
+The tests do not require the service to be running because a Flask app
 is capable of exposing a test client which we can then use as a proxy to send
 it requests directly. The test client is created in the tests' setUp() method.
 """
@@ -77,35 +77,52 @@ class DemonstratesUsage(unittest.TestCase):
         response_json = json.loads(response.data.decode('utf-8'))
         access_granted_token = response_json['Token']
 
-        # Save it locally.
+        # Now the client should save this token localy for future use.
+
+        # At some time in the future...
+
+        # To access any service end point that controls access using
+        # this access_granted token, the client should incorporate the token
+        # into the request header to that end point like this:
+        header = {'Authorization': 'Bearer %s' % access_granted_token}
+
+        # And then check for a http NotAuthorised return code from that
+        # endpoint.
+
+
+    """ 
+    This psuedo-code shows how other services (in any language) wishing to use 
+    the 'access_granted' presented tokens for authentication can use the 
+    authentication service from their endpoint handlers.
+    """
+    def test_demonstrate_use_of_token_checking_in_another_service(self):
+        # On arrival in the handler for a protected endpoint...
+        # Retreive the access_granted JWT from the request's 
+        # 'Authorization' header.
+        # Which should look like 'Bearer <the_jwt>'
+        # Compose a POST payload like this {'Token': the_jwt}.
+        # POST this request to the-auth_service/verify_access_token endpoint.
+        # If the token is valid the reply status code will be 200, and
+        # the handler can resume its normal job of satisfying its request.
+        # endpoint.
+        # If the token is invalid the reply status code will be 401 (Not
+        # authorized), and the handler can react however it thinks fit.
+        pass
+
+
+
 
 """
-The first step that clients using the authentiation service must take is
-to request access using the 'request_access' end point. This class contains the
-units tests for this end point.
+Much of the service logic is tested by the example usage tests above.
+This class tests additional aspects of the service that have not been covered 
+in the usage examples above.
 """
-class RequestAccessEndPointTestCase(unittest.TestCase):
+class MoreDetailedTests(unittest.TestCase):
 
     def setUp(self):
-        # In addtition to Flask's usual test-mode behaviours, this suppresses 
-        # real emails from being sent by the flask_mail package.
         auth_flask.app.testing = True
         self.test_client = auth_flask.app.test_client()
         self.mail = auth_flask.mail
-
-    """
-    The _REQUEST_ACCESS end point is designed to return nothing
-    other than a 200 (OK) return code when the request is properly formed..
-    """
-    def test_response_is_empty_for_properly_formed_request(self):
-        response = self.test_client.post(_REQUEST_ACCESS,
-            data = json.dumps(_PROPERLY_FORMED_REQUEST_PAYLOAD), 
-            content_type='application/json')
-
-        self.assertEqual(
-            response.status_code, 200, 'Wrong html response code.')
-        self.assertEqual(
-            b'', response.data, 'Response data should be empty string')
 
 
     """
@@ -122,10 +139,11 @@ class RequestAccessEndPointTestCase(unittest.TestCase):
         self.assertTrue(b'Failed to parse payload' in response.data)
         self.assertTrue(b'EmailName' in response.data)
 
+
     """
-    Most of the business logic behind this end point is concerned with 
-    building a complex URL to include as an href link in an email, so
-    we check it is built right with this test..
+    Most of the business logic behind the 'request_access' end point is 
+    concerned with building a complex URL to include as an href link in an 
+    email, so we check it is built right with this test..
     """
     def test_email_msg_is_built_correctly_for_properly_formed_request(self):
 
@@ -153,6 +171,10 @@ class RequestAccessEndPointTestCase(unittest.TestCase):
             # Delegate the scrutiny of the email's contents to a helper
             # function..
             self._scrutinise_email_html_content(html_content)
+
+    fart
+    test claim access error handling
+    test verify_access truth boolean
 
 
     #-------------------------------------------------------------------------
